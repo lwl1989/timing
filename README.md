@@ -2,6 +2,10 @@
 
 A one-off timed task.
 
+### Thanks
+
+[robfig/cron](github.com/robfig/cron)
+
 ### Quick Start
 
 ```
