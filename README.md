@@ -4,7 +4,7 @@ A one-off timed task.
 
 ### Thanks
 
-[robfig/cron](github.com/robfig/cron)
+[robfig/cron](https://github.com/robfig/cron)
 
 ### Quick Start
 
@@ -43,3 +43,10 @@ for {
 
 1. Add export task and import task
 2. Save the task list to the persistence layer.
+
+
+### example
+
+1. when user order expire, change order status => fail
+2. Timing of the message like[fcm-message](https://github.com/lwl1989/TTTask)
+and......
