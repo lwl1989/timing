@@ -20,23 +20,27 @@ cron.AddFunc(time.Now().Unix()+1, func() {
 cron.AddTask(&Task{
 	Job:FuncJob(func() {
     		fmt.Println("hello cron2")
-    	}),
-    	RunTime:time.Now().Unix()+4,
+    }),
+    RunTime:time.Now().Unix()+4,
 })
-    
-timer := time.NewTimer(10*time.Second)
-for {
-    select {
-    case  <-timer.C:
-    	cron.AddTask(&Task{
-    		Job:FuncJob(func() {
-    				fmt.Println("hello cron2")
-    		}),
-    		RunTime:time.Now().Unix()+1,
-    	})
-    }
-    break
-}
+
+//block it
+```
+
+add cron task
+```
+//10 seconds print one
+cron.AddFuncSpace(10, func() {
+	fmt.Println("one second after")
+})
+
+
+cron.AddTask(&Task{
+	Job:FuncJob(func() {
+    		fmt.Println("hello cron2")
+    }),
+    Spacing:4 //4 seconds send one
+})
 ```
 
 ### next

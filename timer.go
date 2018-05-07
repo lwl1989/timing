@@ -21,6 +21,12 @@ func NewCron() *OnceCron {
 	}
 }
 
+//add spacing time job to list
+func (one *OnceCron) AddFuncSpace(unixTime int64, f func()) {
+	task := getTaskWithFuncSpacing(unixTime, f)
+	one.tasks = append(one.tasks, task)
+	one.add <- task
+}
 //add func to list
 func (one *OnceCron) AddFunc(unixTime int64, f func()) {
 	task := getTaskWithFunc(unixTime, f)
@@ -30,8 +36,20 @@ func (one *OnceCron) AddFunc(unixTime int64, f func()) {
 
 //add a task to list
 func (one *OnceCron) AddTask(task *Task) {
+	if task.Spacing > 0  && task.RunTime == 0{
+		task.RunTime = time.Now().Unix()+task.Spacing
+	}
 	one.tasks = append(one.tasks, task)
 	one.add <- task
+}
+
+func (one *OnceCron) resetCronTask(key int) {
+	if one.tasks[key].Spacing > 0 {
+		one.tasks[key].RunTime = one.tasks[key].RunTime + one.tasks[key].Spacing
+	}else{
+		one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
+	}
+	one.add <- one.tasks[key]
 }
 
 //export tasks
@@ -92,13 +110,21 @@ func (one *OnceCron) run() {
 			//if time has expired do task and shift key if is task list
 			case <-timer.C:
 				if key != -1 {
-					one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
+					nowTask := one.tasks[key]
+					if nowTask.Spacing > 0 {
+						one.resetCronTask(key)
+					}else{
+						one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
+					}
 				}
 				go task.Job.Run()
 
-				//if add a new task,stop now timer and again
-			case <-one.add:
-				timer.Stop()
+				//if add a new task and runtime < now task runtime
+				// stop now timer and again
+			case t := <-one.add:
+				if t.RunTime < task.RunTime {
+					timer.Stop()
+				}
 
 				//if get a stop single exit
 			case <-one.stop:
@@ -114,6 +140,7 @@ func (one *OnceCron) run() {
 //return a task and key In task list
 //if is null key === -1
 func (one *OnceCron) GetTask() (task *Task, tempKey int) {
+
 	min := one.tasks[0].RunTime
 	tempKey = -1
 
