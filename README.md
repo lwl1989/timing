@@ -41,6 +41,22 @@ cron.AddTask(&Task{
     }),
     Spacing:4 //4 seconds send one
 })
+
+cron.AddTask(&Task{
+	Job:FuncJob(func() {
+    		fmt.Println("hello cron2")
+    }),
+    Spacing:4 //4 seconds send one
+    Number: 5 //exec 5 num go stop
+})
+
+cron.AddTask(&Task{
+	Job:FuncJob(func() {
+    		fmt.Println("hello cron2")
+    }),
+    Spacing:4 //4 seconds send one
+    EndTime: 1999999999   // at 199999999 go stop
+})
 ```
 
 ### next

@@ -103,19 +103,8 @@ func (one *OnceCron) run() {
 			//if time has expired do task and shift key if is task list
 			case <-timer.C:
 				go task.Job.Run()
-				if key != -1 {
-					nowTask := one.tasks[key]
-					one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
-					if nowTask.Spacing > 0 {
-						nowTask.RunTime += nowTask.Spacing
-						if nowTask.EndTime >= nowTask.RunTime {
-							go one.AddTask(nowTask)
-						}
-					}
-				}
+				one.resetTask(key)
 
-				//if add a new task and runtime < now task runtime
-				// stop now timer and again
 			case <-one.add:
 				timer.Stop()
 
@@ -156,4 +145,23 @@ func (one *OnceCron) GetTask() (task *Task, tempKey int) {
 	task = one.tasks[tempKey]
 
 	return task, tempKey
+}
+
+//if add a new task and runtime < now task runtime
+// stop now timer and again
+func (one *OnceCron) resetTask(key int) {
+	if key != -1 {
+
+		nowTask := one.tasks[key]
+		one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
+
+		if nowTask.Spacing > 0 {
+			nowTask.RunTime += nowTask.Spacing
+			if nowTask.EndTime >= nowTask.RunTime && nowTask.Number > 0 {
+				nowTask.Number --
+				go one.AddTask(nowTask)
+			}
+		}
+
+	}
 }
