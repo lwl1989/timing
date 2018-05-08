@@ -20,6 +20,7 @@ func NewCron() *OnceCron {
 		tasks: make([]*Task, 0),
 		add:   make(chan *Task),
 		stop:  make(chan struct{}),
+		remove:make(chan string),
 	}
 }
 
@@ -57,6 +58,7 @@ func (one *OnceCron) export() []*Task {
 
 //stop tasks
 func (one *OnceCron) StopOnce(uuidStr string)  {
+	log.Println(uuidStr)
 	one.remove <- uuidStr
 }
 
@@ -121,6 +123,7 @@ func (one *OnceCron) run() {
 
 			//remove uuid
 			case uuidstr:= <-one.remove:
+				log.Println(uuidstr)
 				one.removeTask(uuidstr)
 				timer.Stop()
 				//if get a stop single exit
