@@ -10,7 +10,7 @@ type Task struct {
 	RunTime int64
 	Spacing int64
 	EndTime int64
-	Number  int64 //exec number
+	Number  int //exec number
 }
 
 //callback function has interface Job
