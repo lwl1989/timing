@@ -3,12 +3,14 @@ package timing
 import (
 	"time"
 	"log"
+	"github.com/google/uuid"
 )
 
 //only exec one timer cron
 type OnceCron struct {
 	tasks []*Task
 	add   chan *Task
+	remove chan string
 	stop  chan struct{}
 }
 
@@ -35,13 +37,16 @@ func (one *OnceCron) AddFunc(unixTime int64, f func()) {
 }
 
 //add a task to list
-func (one *OnceCron) AddTask(task *Task) {
+func (one *OnceCron) AddTask(task *Task) string {
 	if task.Spacing > 0  && task.RunTime == 0{
 		task.RunTime = time.Now().Unix()+task.Spacing
 	}
-
+	if task.Uuid == "" {
+		task.Uuid = uuid.New().String()
+	}
 	one.tasks = append(one.tasks, task)
 	one.add <- task
+	return task.Uuid
 }
 
 
@@ -108,11 +113,17 @@ func (one *OnceCron) run() {
 			case <-one.add:
 				timer.Stop()
 
+			//remove uuid
+			case uuidstr:= <-one.remove:
+				one.removeTask(uuidstr)
+				timer.Stop()
 				//if get a stop single exit
 			case <-one.stop:
 				timer.Stop()
 				return
 			}
+
+
 
 			break
 		}
@@ -166,5 +177,15 @@ func (one *OnceCron) resetTask(key int) {
 			}
 		}
 
+	}
+}
+
+
+func (one *OnceCron) removeTask(uuidStr string) {
+	for key, task := range one.tasks {
+		if task.Uuid == uuidStr {
+			one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
+			break
+		}
 	}
 }
