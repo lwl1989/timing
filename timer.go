@@ -55,6 +55,12 @@ func (one *OnceCron) export() []*Task {
 	return one.tasks
 }
 
+//stop tasks
+func (one *OnceCron) StopOnce(uuidStr string)  {
+	one.remove <- uuidStr
+}
+
+
 //run Cron
 func (one *OnceCron) Start() {
 	go one.run()
