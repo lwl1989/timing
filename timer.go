@@ -153,12 +153,15 @@ func (one *OnceCron) resetTask(key int) {
 	if key != -1 {
 
 		nowTask := one.tasks[key]
+		log.Println(nowTask)
 		one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
 
 		if nowTask.Spacing > 0 {
 			nowTask.RunTime += nowTask.Spacing
-			if nowTask.EndTime >= nowTask.RunTime && nowTask.Number > 0 {
+			if nowTask.Number > 1 {
 				nowTask.Number --
+				go one.AddTask(nowTask)
+			}else if nowTask.EndTime >= nowTask.RunTime {
 				go one.AddTask(nowTask)
 			}
 		}
