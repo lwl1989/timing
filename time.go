@@ -3,9 +3,9 @@ package timing
 import (
 	"time"
 	"github.com/google/uuid"
+	"fmt"
 )
 
-/**/
 
 //need to do task has interface Job
 type Task struct {
@@ -42,4 +42,8 @@ func getTaskWithFuncSpacing(spacing int64, endTime int64, f func()) *Task {
 		EndTime: endTime,
 		Uuid:uuid.New().String(),
 	}
+}
+
+func (task *Task) toString() string {
+	return fmt.Sprintf("uuid: %s, runTime %d, spaceing %d, endTime　%d, number %d",task.Uuid,task.RunTime,task.Spacing,task.EndTime,task.Number)
 }

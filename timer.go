@@ -4,32 +4,36 @@ import (
 	"time"
 	"log"
 	"github.com/google/uuid"
+	"os"
 )
 
 //only exec one timer cron
 type OnceCron struct {
-	tasks []*Task
-	add   chan *Task
+	tasks  []*Task
+	add    chan *Task
 	remove chan string
-	stop  chan struct{}
+	stop   chan struct{}
+	Logger *log.Logger
 }
 
 //return a new Cron
 func NewCron() *OnceCron {
 	return &OnceCron{
-		tasks: make([]*Task, 0),
-		add:   make(chan *Task),
-		stop:  make(chan struct{}),
-		remove:make(chan string),
+		tasks:  make([]*Task, 0),
+		add:    make(chan *Task),
+		stop:   make(chan struct{}),
+		remove: make(chan string),
+		Logger: log.New(os.Stdout,"[cron]: ",log.Ldate|log.Ltime|log.Lshortfile),
 	}
 }
 
 //add spacing time job to list
-func (one *OnceCron) AddFuncSpace(unixTime int64,endTime int64, f func()) {
+func (one *OnceCron) AddFuncSpace(unixTime int64, endTime int64, f func()) {
 	task := getTaskWithFuncSpacing(unixTime, endTime, f)
 	one.tasks = append(one.tasks, task)
 	one.add <- task
 }
+
 //add func to list
 func (one *OnceCron) AddFunc(unixTime int64, f func()) {
 	task := getTaskWithFunc(unixTime, f)
@@ -39,8 +43,8 @@ func (one *OnceCron) AddFunc(unixTime int64, f func()) {
 
 //add a task to list
 func (one *OnceCron) AddTask(task *Task) string {
-	if task.Spacing > 0  && task.RunTime == 0{
-		task.RunTime = time.Now().Unix()+task.Spacing
+	if task.Spacing > 0 && task.RunTime == 0 {
+		task.RunTime = time.Now().Unix() + task.Spacing
 	}
 	if task.Uuid == "" {
 		task.Uuid = uuid.New().String()
@@ -50,38 +54,29 @@ func (one *OnceCron) AddTask(task *Task) string {
 	return task.Uuid
 }
 
-
 //export tasks
 func (one *OnceCron) export() []*Task {
 	return one.tasks
 }
 
 //stop tasks
-func (one *OnceCron) StopOnce(uuidStr string)  {
-	log.Println(uuidStr)
+func (one *OnceCron) StopOnce(uuidStr string) {
 	one.remove <- uuidStr
 }
 
-
 //run Cron
 func (one *OnceCron) Start() {
+	//初始化的時候加入一個一年的長定時器,間隔1小時執行一次
+	task := getTaskWithFuncSpacing(3600, time.Now().Add(time.Hour * 24 * 365).Unix(), func() {
+		log.Println("It's a Hour timer!")
+	})
+	one.tasks = append(one.tasks, task)
 	go one.run()
 }
 
 //run Cron
 func (one *OnceCron) Stop() {
 	one.stop <- struct{}{}
-}
-
-//return A task after a year to exec
-func (one *OnceCron) sleep() (task *Task) {
-	rs := FuncJob(func() {
-		log.Println("It's a Year timer!")
-	})
-	return &Task{
-		Job:     rs,
-		RunTime: time.Now().Unix() + 365*3600*24,
-	}
 }
 
 //run task list
@@ -91,14 +86,7 @@ func (one *OnceCron) run() {
 	for {
 
 		now := time.Now()
-		var task *Task
-		key := -1
-		if len(one.tasks) == 0 {
-			task = one.sleep()
-		} else {
-			task, key = one.GetTask()
-		}
-
+		task, key := one.GetTask()
 		i64 := task.RunTime - now.Unix()
 
 		var d time.Duration
@@ -115,15 +103,12 @@ func (one *OnceCron) run() {
 			select {
 			//if time has expired do task and shift key if is task list
 			case <-timer.C:
-				go task.Job.Run()
-				one.resetTask(key)
-
+				one.doAndReset(key, task)
+				//if add task
 			case <-one.add:
 				timer.Stop()
-
-			//remove uuid
-			case uuidstr:= <-one.remove:
-				log.Println(uuidstr)
+				// remove task with remove uuid
+			case uuidstr := <-one.remove:
 				one.removeTask(uuidstr)
 				timer.Stop()
 				//if get a stop single exit
@@ -132,34 +117,28 @@ func (one *OnceCron) run() {
 				return
 			}
 
-
-
 			break
 		}
 	}
 }
 
 //return a task and key In task list
-//if is null key === -1
 func (one *OnceCron) GetTask() (task *Task, tempKey int) {
 
 	min := one.tasks[0].RunTime
-	tempKey = -1
+	tempKey = 0
 
 	for key, task := range one.tasks {
-		if task.RunTime <= min {
-			tempKey = key
-			break
+
+		if min <= task.RunTime {
+			continue
 		}
 		if min > task.RunTime {
 			tempKey = key
+
 			min = task.RunTime
 			continue
 		}
-	}
-
-	if tempKey == -1 {
-		return nil, -1
 	}
 
 	task = one.tasks[tempKey]
@@ -169,26 +148,31 @@ func (one *OnceCron) GetTask() (task *Task, tempKey int) {
 
 //if add a new task and runtime < now task runtime
 // stop now timer and again
-func (one *OnceCron) resetTask(key int) {
-	if key != -1 {
+func (one *OnceCron) doAndReset(key int, task *Task) {
+	if task != nil {
+		go task.Job.Run()
+	}
+
+	//null pointer
+	if key < len(one.tasks)-1 {
 
 		nowTask := one.tasks[key]
-		log.Println(nowTask)
 		one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
 
 		if nowTask.Spacing > 0 {
 			nowTask.RunTime += nowTask.Spacing
 			if nowTask.Number > 1 {
 				nowTask.Number --
-				go one.AddTask(nowTask)
-			}else if nowTask.EndTime >= nowTask.RunTime {
-				go one.AddTask(nowTask)
+				one.tasks = append(one.tasks, nowTask)
+				one.Logger.Println("addTask",nowTask.toString())
+			} else if nowTask.EndTime >= nowTask.RunTime {
+				one.tasks = append(one.tasks, nowTask)
+				one.Logger.Println("addTask",nowTask.toString())
 			}
 		}
 
 	}
 }
-
 
 func (one *OnceCron) removeTask(uuidStr string) {
 	for key, task := range one.tasks {
@@ -198,3 +182,5 @@ func (one *OnceCron) removeTask(uuidStr string) {
 		}
 	}
 }
+
+
