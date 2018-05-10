@@ -91,7 +91,8 @@ func (one *OnceCron) run() {
 
 		var d time.Duration
 		if i64 < 0 {
-			d = time.Microsecond * 10
+			one.tasks[key].RunTime = now.Unix()
+			d = time.Second
 		} else {
 			d = time.Unix(task.RunTime, 0).Sub(now)
 		}
