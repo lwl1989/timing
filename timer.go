@@ -5,6 +5,7 @@ import (
 	"log"
 	"github.com/google/uuid"
 	"os"
+	"fmt"
 )
 
 //only exec one timer cron
@@ -104,7 +105,13 @@ func (one *OnceCron) run() {
 			select {
 			//if time has expired do task and shift key if is task list
 			case <-timer.C:
-				one.doAndReset(key, task)
+				one.doAndReset(key)
+				if task != nil {
+					//fmt.Println(one.tasks[key])
+					go task.Job.Run()
+					timer.Stop()
+				}
+
 				//if add task
 			case <-one.add:
 				timer.Stop()
@@ -149,26 +156,24 @@ func (one *OnceCron) GetTask() (task *Task, tempKey int) {
 
 //if add a new task and runtime < now task runtime
 // stop now timer and again
-func (one *OnceCron) doAndReset(key int, task *Task) {
-	if task != nil {
-		go task.Job.Run()
-	}
-
+func (one *OnceCron) doAndReset(key int) {
+	fmt.Println(len(one.tasks),key)
 	//null pointer
-	if key < len(one.tasks)-1 {
+	if key < len(one.tasks) {
 
 		nowTask := one.tasks[key]
 		one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
 
 		if nowTask.Spacing > 0 {
 			nowTask.RunTime += nowTask.Spacing
+			fmt.Println(nowTask)
 			if nowTask.Number > 1 {
 				nowTask.Number --
 				one.tasks = append(one.tasks, nowTask)
-				one.Logger.Println("addTask",nowTask.toString())
+				//one.Logger.Println("addTask",nowTask.toString())
 			} else if nowTask.EndTime >= nowTask.RunTime {
 				one.tasks = append(one.tasks, nowTask)
-				one.Logger.Println("addTask",nowTask.toString())
+				//one.Logger.Println("addTask",nowTask.toString())
 			}
 		}
 
