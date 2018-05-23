@@ -74,7 +74,7 @@ func (scheduler *TaskScheduler) AddTask(task *Task) string {
 }
 
 //export tasks
-func (scheduler *TaskScheduler) export() []*Task {
+func (scheduler *TaskScheduler) Export() []*Task {
 	return scheduler.tasks
 }
 
