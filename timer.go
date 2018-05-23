@@ -8,8 +8,13 @@ import (
 	"fmt"
 )
 
-//only exec one timer cron
+//compatible old name
 type OnceCron struct {
+	*TaskScheduler
+}
+
+//only exec cron timer cron
+type TaskScheduler struct {
 	tasks  []*Task
 	add    chan *Task
 	remove chan string
@@ -17,83 +22,96 @@ type OnceCron struct {
 	Logger *log.Logger
 }
 
-//return a new Cron
+//return old name with OnceCron
 func NewCron() *OnceCron {
 	return &OnceCron{
+		&TaskScheduler{
+			tasks:  make([]*Task, 0),
+			add:    make(chan *Task),
+			stop:   make(chan struct{}),
+			remove: make(chan string),
+			Logger: log.New(os.Stdout, "[Control]: ", log.Ldate|log.Ltime|log.Lshortfile),
+		},
+	}
+}
+
+//return a Controller Scheduler
+func NewScheduler() *TaskScheduler {
+	return &TaskScheduler{
 		tasks:  make([]*Task, 0),
 		add:    make(chan *Task),
 		stop:   make(chan struct{}),
 		remove: make(chan string),
-		Logger: log.New(os.Stdout,"[cron]: ",log.Ldate|log.Ltime|log.Lshortfile),
+		Logger: log.New(os.Stdout, "[Control]: ", log.Ldate|log.Ltime|log.Lshortfile),
 	}
 }
 
 //add spacing time job to list
-func (one *OnceCron) AddFuncSpace(unixTime int64, endTime int64, f func()) {
-	task := getTaskWithFuncSpacing(unixTime, endTime, f)
-	one.tasks = append(one.tasks, task)
-	one.add <- task
+func (scheduler *TaskScheduler) AddFuncSpace(spaceTime int64, endTime int64, f func()) {
+	task := getTaskWithFuncSpacing(spaceTime, endTime, f)
+	scheduler.tasks = append(scheduler.tasks, task)
+	scheduler.add <- task
 }
 
 //add func to list
-func (one *OnceCron) AddFunc(unixTime int64, f func()) {
+func (scheduler *TaskScheduler) AddFunc(unixTime int64, f func()) {
 	task := getTaskWithFunc(unixTime, f)
-	one.tasks = append(one.tasks, task)
-	one.add <- task
+	scheduler.tasks = append(scheduler.tasks, task)
+	scheduler.add <- task
 }
 
 //add a task to list
-func (one *OnceCron) AddTask(task *Task) string {
+func (scheduler *TaskScheduler) AddTask(task *Task) string {
 	if task.Spacing > 0 && task.RunTime == 0 {
 		task.RunTime = time.Now().Unix() + task.Spacing
 	}
 	if task.Uuid == "" {
 		task.Uuid = uuid.New().String()
 	}
-	one.tasks = append(one.tasks, task)
-	one.add <- task
+	scheduler.tasks = append(scheduler.tasks, task)
+	scheduler.add <- task
 	return task.Uuid
 }
 
 //export tasks
-func (one *OnceCron) export() []*Task {
-	return one.tasks
+func (scheduler *TaskScheduler) export() []*Task {
+	return scheduler.tasks
 }
 
 //stop tasks
-func (one *OnceCron) StopOnce(uuidStr string) {
-	one.remove <- uuidStr
+func (scheduler *TaskScheduler) StopOnce(uuidStr string) {
+	scheduler.remove <- uuidStr
 }
 
 //run Cron
-func (one *OnceCron) Start() {
+func (scheduler *TaskScheduler) Start() {
 	//初始化的時候加入一個一年的長定時器,間隔1小時執行一次
 	task := getTaskWithFuncSpacing(3600, time.Now().Add(time.Hour * 24 * 365).Unix(), func() {
 		log.Println("It's a Hour timer!")
 	})
-	one.tasks = append(one.tasks, task)
-	go one.run()
+	scheduler.tasks = append(scheduler.tasks, task)
+	go scheduler.run()
 }
 
 //run Cron
-func (one *OnceCron) Stop() {
-	one.stop <- struct{}{}
+func (scheduler *TaskScheduler) Stop() {
+	scheduler.stop <- struct{}{}
 }
 
 //run task list
 //if is empty, run a year timer task
-func (one *OnceCron) run() {
+func (scheduler *TaskScheduler) run() {
 
 	for {
 
 		now := time.Now()
-		task, key := one.GetTask()
+		task, key := scheduler.GetTask()
 		i64 := task.RunTime - now.Unix()
 
 		var d time.Duration
 		if i64 < 0 {
-			one.tasks[key].RunTime = now.Unix()
-			one.doAndReset(key)
+			scheduler.tasks[key].RunTime = now.Unix()
+			scheduler.doAndReset(key)
 			continue
 		} else {
 			d = time.Unix(task.RunTime, 0).Sub(now)
@@ -106,22 +124,22 @@ func (one *OnceCron) run() {
 			select {
 			//if time has expired do task and shift key if is task list
 			case <-timer.C:
-				one.doAndReset(key)
+				scheduler.doAndReset(key)
 				if task != nil {
-					//fmt.Println(one.tasks[key])
+					//fmt.Println(scheduler.tasks[key])
 					go task.Job.Run()
 					timer.Stop()
 				}
 
 				//if add task
-			case <-one.add:
+			case <-scheduler.add:
 				timer.Stop()
 				// remove task with remove uuid
-			case uuidstr := <-one.remove:
-				one.removeTask(uuidstr)
+			case uuidstr := <-scheduler.remove:
+				scheduler.removeTask(uuidstr)
 				timer.Stop()
 				//if get a stop single exit
-			case <-one.stop:
+			case <-scheduler.stop:
 				timer.Stop()
 				return
 			}
@@ -132,12 +150,12 @@ func (one *OnceCron) run() {
 }
 
 //return a task and key In task list
-func (one *OnceCron) GetTask() (task *Task, tempKey int) {
+func (scheduler *TaskScheduler) GetTask() (task *Task, tempKey int) {
 
-	min := one.tasks[0].RunTime
+	min := scheduler.tasks[0].RunTime
 	tempKey = 0
 
-	for key, task := range one.tasks {
+	for key, task := range scheduler.tasks {
 
 		if min <= task.RunTime {
 			continue
@@ -150,44 +168,42 @@ func (one *OnceCron) GetTask() (task *Task, tempKey int) {
 		}
 	}
 
-	task = one.tasks[tempKey]
+	task = scheduler.tasks[tempKey]
 
 	return task, tempKey
 }
 
 //if add a new task and runtime < now task runtime
 // stop now timer and again
-func (one *OnceCron) doAndReset(key int) {
-	fmt.Println(len(one.tasks),key)
+func (scheduler *TaskScheduler) doAndReset(key int) {
+	fmt.Println(len(scheduler.tasks), key)
 	//null pointer
-	if key < len(one.tasks) {
+	if key < len(scheduler.tasks) {
 
-		nowTask := one.tasks[key]
-		one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
+		nowTask := scheduler.tasks[key]
+		scheduler.tasks = append(scheduler.tasks[:key], scheduler.tasks[key+1:]...)
 
 		if nowTask.Spacing > 0 {
 			nowTask.RunTime += nowTask.Spacing
 			fmt.Println(nowTask)
 			if nowTask.Number > 1 {
 				nowTask.Number --
-				one.tasks = append(one.tasks, nowTask)
-				//one.Logger.Println("addTask",nowTask.toString())
+				scheduler.tasks = append(scheduler.tasks, nowTask)
+				//scheduler.Logger.Println("addTask",nowTask.toString())
 			} else if nowTask.EndTime >= nowTask.RunTime {
-				one.tasks = append(one.tasks, nowTask)
-				//one.Logger.Println("addTask",nowTask.toString())
+				scheduler.tasks = append(scheduler.tasks, nowTask)
+				//scheduler.Logger.Println("addTask",nowTask.toString())
 			}
 		}
 
 	}
 }
 
-func (one *OnceCron) removeTask(uuidStr string) {
-	for key, task := range one.tasks {
+func (scheduler *TaskScheduler) removeTask(uuidStr string) {
+	for key, task := range scheduler.tasks {
 		if task.Uuid == uuidStr {
-			one.tasks = append(one.tasks[:key], one.tasks[key+1:]...)
+			scheduler.tasks = append(scheduler.tasks[:key], scheduler.tasks[key+1:]...)
 			break
 		}
 	}
 }
-
-
