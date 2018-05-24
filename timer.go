@@ -170,10 +170,10 @@ func (one *OnceCron) doAndReset(key int) {
 			if nowTask.Number > 1 {
 				nowTask.Number --
 				one.tasks = append(one.tasks, nowTask)
-				//one.Logger.Println("addTask",nowTask.toString())
+				one.Logger.Println("addTask",nowTask.toString())
 			} else if nowTask.EndTime >= nowTask.RunTime {
 				one.tasks = append(one.tasks, nowTask)
-				//one.Logger.Println("addTask",nowTask.toString())
+				one.Logger.Println("addTask",nowTask.toString())
 			}
 		}
 
