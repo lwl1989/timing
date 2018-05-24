@@ -8,7 +8,7 @@ import (
 )
 
 //test add Func
-func addFuncTest() {
+func AddFuncTest() {
 	cron := NewCron()
 
 	go cron.Start()
@@ -26,9 +26,27 @@ func addFuncTest() {
 	})
 }
 
+//test add space task func
+func AddSpaceTimeTest() {
+	cron := NewScheduler()
+
+	go cron.Start()
+
+	cron.AddFuncSpace(1, time.Now().Unix()+10, func() {
+		fmt.Println("one second after")
+	})
+
+	cron.AddFuncSpace(1, time.Now().Unix()+20,func() {
+		fmt.Println("one second after, task second")
+	})
+
+	cron.AddFunc(time.Now().Unix()+10, func() {
+		fmt.Println("ten second after")
+	})
+}
 
 //test add Task and timing add Task
-func addTaskTest() {
+func AddTaskTest() {
 	cron := NewCron()
 	go cron.Start()
 

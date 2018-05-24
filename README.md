@@ -9,17 +9,17 @@ A one-off timed task.
 ### Quick Start
 
 ```
-cron := NewCron()
+scheduler := NewScheduler()
 
-go cron.Start()
+scheduler.Start()
 
-cron.AddFunc(time.Now().Unix()+1, func() {
+scheduler.AddFunc(time.Now().Unix()+1, func() {
 	fmt.Println("one second after")
 })
 
-cron.AddTask(&Task{
+scheduler.AddTask(&Task{
 	Job:FuncJob(func() {
-    		fmt.Println("hello cron2")
+    		fmt.Println("hello task2")
     }),
     RunTime:time.Now().Unix()+4,
 })
@@ -27,32 +27,32 @@ cron.AddTask(&Task{
 //block it
 ```
 
-add cron task
+add task
 ```
 //10 seconds print one
-cron.AddFuncSpace(10, func() {
+scheduler.AddFuncSpace(10, func() {
 	fmt.Println("one second after")
 })
 
 
-cron.AddTask(&Task{
+scheduler.AddTask(&Task{
 	Job:FuncJob(func() {
-    		fmt.Println("hello cron2")
+    		fmt.Println("hello task")
     }),
     Spacing:4 //4 seconds send one
 })
 
-cron.AddTask(&Task{
+scheduler.AddTask(&Task{
 	Job:FuncJob(func() {
-    		fmt.Println("hello cron2")
+    		fmt.Println("hello task2")
     }),
     Spacing:4 //4 seconds send one
     Number: 5 //exec 5 num go stop
 })
 
-cron.AddTask(&Task{
+scheduler.AddTask(&Task{
 	Job:FuncJob(func() {
-    		fmt.Println("hello cron2")
+    		fmt.Println("hello task3")
     }),
     Spacing:4 //4 seconds send one
     EndTime: 1999999999   // at 199999999 go stop
