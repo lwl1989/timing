@@ -6,6 +6,13 @@ A one-off timed task.
 
 [robfig/cron](https://github.com/robfig/cron)
 
+### ChangeLog
+
+[2018-05-22]  Export Success
+[2018-05-22]  Renamed to TaskScheduler
+
+
+
 ### Quick Start
 
 ```
@@ -61,8 +68,7 @@ scheduler.AddTask(&Task{
 
 ### next
 
-1. Add export task and import task
-2. Save the task list to the persistence layer.
+1. Add export task and import task[2018-05-22 done]
 
 
 ### example
