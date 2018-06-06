@@ -16,22 +16,24 @@ type OnceCron struct {
 //only exec cron timer cron
 type TaskScheduler struct {
 	tasks  []*Task
+	swap   []*Task
 	add    chan *Task
 	remove chan string
 	stop   chan struct{}
 	Logger *log.Logger
+	lock	bool
+}
+
+
+type Lock interface {
+	Lock()
+	UnLock()
 }
 
 //return old name with OnceCron
 func NewCron() *OnceCron {
 	return &OnceCron{
-		&TaskScheduler{
-			tasks:  make([]*Task, 0),
-			add:    make(chan *Task),
-			stop:   make(chan struct{}),
-			remove: make(chan string),
-			Logger: log.New(os.Stdout, "[Control]: ", log.Ldate|log.Ltime|log.Lshortfile),
-		},
+		TaskScheduler:NewScheduler(),
 	}
 }
 
@@ -39,37 +41,54 @@ func NewCron() *OnceCron {
 func NewScheduler() *TaskScheduler {
 	return &TaskScheduler{
 		tasks:  make([]*Task, 0),
+		swap:   make([]*Task, 0),
 		add:    make(chan *Task),
 		stop:   make(chan struct{}),
 		remove: make(chan string),
 		Logger: log.New(os.Stdout, "[Control]: ", log.Ldate|log.Ltime|log.Lshortfile),
+		lock:	false,
 	}
 }
 
-//add spacing time job to list
+//add spacing time job to list with number
+func (scheduler *TaskScheduler) AddFuncSpaceNumber(spaceTime int64, number int, f func()) {
+	task := getTaskWithFuncSpacingNumber(spaceTime, number, f)
+	scheduler.addTask(task)
+}
+//add spacing time job to list with endTime
 func (scheduler *TaskScheduler) AddFuncSpace(spaceTime int64, endTime int64, f func()) {
 	task := getTaskWithFuncSpacing(spaceTime, endTime, f)
-	scheduler.tasks = append(scheduler.tasks, task)
-	scheduler.add <- task
+	scheduler.addTask(task)
 }
 
 //add func to list
 func (scheduler *TaskScheduler) AddFunc(unixTime int64, f func()) {
 	task := getTaskWithFunc(unixTime, f)
-	scheduler.tasks = append(scheduler.tasks, task)
-	scheduler.add <- task
+	scheduler.addTask(task)
 }
 
 //add a task to list
 func (scheduler *TaskScheduler) AddTask(task *Task) string {
 	if task.Spacing > 0 && task.RunTime == 0 {
-		task.RunTime = time.Now().Unix() + task.Spacing
+		task.RunTime = time.Now().UnixNano() + task.Spacing
 	}
 	if task.Uuid == "" {
 		task.Uuid = uuid.New().String()
 	}
-	scheduler.tasks = append(scheduler.tasks, task)
-	scheduler.add <- task
+	return scheduler.addTask(task)
+}
+
+//if lock add to swap
+func (scheduler *TaskScheduler) addTask(task *Task) string  {
+	if scheduler.lock {
+		fmt.Println("locked")
+		scheduler.swap = append(scheduler.swap, task)
+		scheduler.add <- task
+	} else{
+		scheduler.tasks = append(scheduler.tasks, task)
+		scheduler.add <- task
+	}
+
 	return task.Uuid
 }
 
@@ -106,15 +125,21 @@ func (scheduler *TaskScheduler) run() {
 
 		now := time.Now()
 		task, key := scheduler.GetTask()
-		i64 := task.RunTime - now.Unix()
+		i64 := task.RunTime - now.UnixNano()
 
 		var d time.Duration
 		if i64 < 0 {
-			scheduler.tasks[key].RunTime = now.Unix()
+			scheduler.tasks[key].RunTime = now.UnixNano()
+			if task != nil {
+				go task.Job.Run()
+			}
 			scheduler.doAndReset(key)
 			continue
 		} else {
-			d = time.Unix(task.RunTime, 0).Sub(now)
+			sec := task.RunTime / int64(time.Second)
+			nsec := task.RunTime % int64(time.Second)
+
+			d = time.Unix(sec, nsec).Sub(now)
 		}
 
 		timer := time.NewTimer(d)
@@ -151,6 +176,8 @@ func (scheduler *TaskScheduler) run() {
 
 //return a task and key In task list
 func (scheduler *TaskScheduler) GetTask() (task *Task, tempKey int) {
+	scheduler.Lock()
+	defer scheduler.UnLock()
 
 	min := scheduler.tasks[0].RunTime
 	tempKey = 0
@@ -176,7 +203,8 @@ func (scheduler *TaskScheduler) GetTask() (task *Task, tempKey int) {
 //if add a new task and runtime < now task runtime
 // stop now timer and again
 func (scheduler *TaskScheduler) doAndReset(key int) {
-	fmt.Println(len(scheduler.tasks), key)
+	scheduler.Lock()
+	defer scheduler.UnLock()
 	//null pointer
 	if key < len(scheduler.tasks) {
 
@@ -185,25 +213,43 @@ func (scheduler *TaskScheduler) doAndReset(key int) {
 
 		if nowTask.Spacing > 0 {
 			nowTask.RunTime += nowTask.Spacing
-			fmt.Println(nowTask)
 			if nowTask.Number > 1 {
 				nowTask.Number --
 				scheduler.tasks = append(scheduler.tasks, nowTask)
-				//scheduler.Logger.Println("addTask",nowTask.toString())
 			} else if nowTask.EndTime >= nowTask.RunTime {
 				scheduler.tasks = append(scheduler.tasks, nowTask)
-				//scheduler.Logger.Println("addTask",nowTask.toString())
 			}
 		}
 
 	}
 }
 
+
+//remove task by uuid
 func (scheduler *TaskScheduler) removeTask(uuidStr string) {
+	scheduler.Lock()
+	defer scheduler.UnLock()
 	for key, task := range scheduler.tasks {
 		if task.Uuid == uuidStr {
 			scheduler.tasks = append(scheduler.tasks[:key], scheduler.tasks[key+1:]...)
 			break
 		}
 	}
+}
+
+//lock task []
+func (scheduler *TaskScheduler) Lock() {
+	scheduler.lock = true
+}
+
+//unlock task []
+func (scheduler *TaskScheduler) UnLock() {
+	scheduler.lock = false
+	if len(scheduler.swap) > 0 {
+		for _, task := range scheduler.swap {
+			scheduler.tasks = append(scheduler.tasks, task)
+		}
+		scheduler.swap = make([]*Task, 0)
+	}
+
 }

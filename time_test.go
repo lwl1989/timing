@@ -13,15 +13,15 @@ func AddFuncTest() {
 
 	go cron.Start()
 
-	cron.AddFunc(time.Now().Unix()+1, func() {
+	cron.AddFunc(time.Now().UnixNano()+1, func() {
 		fmt.Println("one second after")
 	})
 
-	cron.AddFunc(time.Now().Unix()+1, func() {
+	cron.AddFunc(time.Now().UnixNano()+1, func() {
 		fmt.Println("one second after, task second")
 	})
 
-	cron.AddFunc(time.Now().Unix()+10, func() {
+	cron.AddFunc(time.Now().UnixNano()+10, func() {
 		fmt.Println("ten second after")
 	})
 }
@@ -32,15 +32,15 @@ func AddSpaceTimeTest() {
 
 	go cron.Start()
 
-	cron.AddFuncSpace(1, time.Now().Unix()+10, func() {
+	cron.AddFuncSpace(1, time.Now().UnixNano()+10, func() {
 		fmt.Println("one second after")
 	})
 
-	cron.AddFuncSpace(1, time.Now().Unix()+20,func() {
+	cron.AddFuncSpace(1, time.Now().UnixNano()+20,func() {
 		fmt.Println("one second after, task second")
 	})
 
-	cron.AddFunc(time.Now().Unix()+10, func() {
+	cron.AddFunc(time.Now().UnixNano()+10, func() {
 		fmt.Println("ten second after")
 	})
 }
@@ -54,7 +54,7 @@ func AddTaskTest() {
 		Job:FuncJob(func() {
 			fmt.Println("hello cron")
 		}),
-		RunTime:time.Now().Unix()+2,
+		RunTime:time.Now().UnixNano()+2,
 	})
 
 
@@ -62,14 +62,14 @@ func AddTaskTest() {
 		Job:FuncJob(func() {
 			fmt.Println("hello cron1")
 		}),
-		RunTime:time.Now().Unix()+3,
+		RunTime:time.Now().UnixNano()+3,
 	})
 
 	cron.AddTask(&Task{
 		Job: FuncJob(func() {
 			fmt.Println("hello cron2")
 		}),
-		RunTime: time.Now().Unix() + 4,
+		RunTime: time.Now().UnixNano() + 4,
 	})
 
 	timer := time.NewTimer(10 * time.Second)
@@ -80,7 +80,7 @@ func AddTaskTest() {
 				Job: FuncJob(func() {
 					fmt.Println("hello cron2")
 				}),
-				RunTime: time.Now().Unix() + 1,
+				RunTime: time.Now().UnixNano() + 1,
 			})
 		}
 		break
