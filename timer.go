@@ -226,7 +226,7 @@ func (scheduler *TaskScheduler) doAndReset(key int) {
 		scheduler.tasks = append(scheduler.tasks[:key], scheduler.tasks[key+1:]...)
 
 		if nowTask.Spacing > 0 {
-			nowTask.RunTime += nowTask.Spacing
+			nowTask.RunTime += nowTask.Spacing * int64(time.Second)
 			if nowTask.Number > 1 {
 				nowTask.Number --
 				scheduler.tasks = append(scheduler.tasks, nowTask)
