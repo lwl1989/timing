@@ -35,7 +35,6 @@ func getTaskWithFunc(unixTime int64, f func()) *Task {
 }
 
 func getTaskWithFuncSpacingNumber(spacing int64, number int, f func()) *Task {
-	spacing = spacing * int64(time.Second)
 	return &Task{
 		Job:     FuncJob(f),
 		RunTime: time.Now().UnixNano()+spacing,
@@ -46,7 +45,6 @@ func getTaskWithFuncSpacingNumber(spacing int64, number int, f func()) *Task {
 	}
 }
 func getTaskWithFuncSpacing(spacing int64, endTime int64, f func()) *Task {
-	spacing = spacing * int64(time.Second)
 	return &Task{
 		Job:     FuncJob(f),
 		RunTime: time.Now().UnixNano()+spacing,

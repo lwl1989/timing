@@ -69,9 +69,23 @@ func (scheduler *TaskScheduler) AddFunc(unixTime int64, f func()) {
 
 //add a task to list
 func (scheduler *TaskScheduler) AddTask(task *Task) string {
-	if task.Spacing > 0 && task.RunTime == 0 {
-		task.RunTime = time.Now().UnixNano() + task.Spacing
+	if task.RunTime != 0 {
+		if task.RunTime < 10000000000 {
+			task.RunTime = task.RunTime * int64(time.Second)
+		}
+		if task.RunTime < time.Now().UnixNano() {
+			//延遲1秒
+			task.RunTime = time.Now().UnixNano() + int64(time.Second)
+		}
+	} else {
+		if task.Spacing > 0 {
+			task.RunTime = time.Now().UnixNano() + task.Spacing * int64(time.Second)
+		}else{
+			scheduler.Logger.Println("error too add task! Runtime error")
+			return ""
+		}
 	}
+
 	if task.Uuid == "" {
 		task.Uuid = uuid.New().String()
 	}
@@ -105,7 +119,7 @@ func (scheduler *TaskScheduler) StopOnce(uuidStr string) {
 //run Cron
 func (scheduler *TaskScheduler) Start() {
 	//初始化的時候加入一個一年的長定時器,間隔1小時執行一次
-	task := getTaskWithFuncSpacing(3600, time.Now().Add(time.Hour * 24 * 365).Unix(), func() {
+	task := getTaskWithFuncSpacing(3600, time.Now().Add(time.Hour * 24 * 365).UnixNano(), func() {
 		log.Println("It's a Hour timer!")
 	})
 	scheduler.tasks = append(scheduler.tasks, task)
