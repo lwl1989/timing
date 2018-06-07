@@ -40,7 +40,7 @@ func getTaskWithFuncSpacingNumber(spacing int64, number int, f func()) *Task {
 		RunTime: time.Now().UnixNano()+spacing,
 		Spacing: spacing,
 		Number:  number,
-		EndTime: time.Now().UnixNano()+ int64(number)*spacing,
+		EndTime: time.Now().UnixNano()+ int64(number)*spacing*int64(time.Second),
 		Uuid:uuid.New().String(),
 	}
 }
