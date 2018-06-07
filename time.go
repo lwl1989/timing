@@ -11,9 +11,9 @@ import (
 type Task struct {
 	Job     Job
 	Uuid    string
-	RunTime int64
-	Spacing int64
-	EndTime int64
+	RunTime int64   //UnixNanoTime
+	Spacing int64	//spacing sencond
+	EndTime int64   //UnixNanoTime
 	Number  int //exec number
 }
 
