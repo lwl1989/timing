@@ -70,7 +70,7 @@ func (scheduler *TaskScheduler) AddFunc(unixTime int64, f func()) {
 //add a task to list
 func (scheduler *TaskScheduler) AddTask(task *Task) string {
 	if task.RunTime != 0 {
-		if task.RunTime < 10000000000 {
+		if task.RunTime < 100000000000 {
 			task.RunTime = task.RunTime * int64(time.Second)
 		}
 		if task.RunTime < time.Now().UnixNano() {
