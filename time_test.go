@@ -3,12 +3,13 @@
 package timing
 
 import (
-"time"
-"fmt"
+	"time"
+	"fmt"
+	"testing"
 )
 
 //test add Func
-func AddFuncTest() {
+func Test_AddFunc(t *testing.T) {
 	cron := NewCron()
 
 	go cron.Start()
@@ -27,7 +28,7 @@ func AddFuncTest() {
 }
 
 //test add space task func
-func AddSpaceTimeTest() {
+func Test_AddFuncSpace(t *testing.T) {
 	cron := NewScheduler()
 
 	go cron.Start()
@@ -46,7 +47,7 @@ func AddSpaceTimeTest() {
 }
 
 //test add Task and timing add Task
-func AddTaskTest() {
+func Test_AddTask(t *testing.T) {
 	cron := NewCron()
 	go cron.Start()
 
