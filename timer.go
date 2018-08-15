@@ -111,7 +111,7 @@ func (scheduler *TaskScheduler) Export() []*Task {
 	return scheduler.tasks
 }
 
-//stop tasks
+//stop task with uuid
 func (scheduler *TaskScheduler) StopOnce(uuidStr string) {
 	scheduler.remove <- uuidStr
 }
@@ -126,7 +126,7 @@ func (scheduler *TaskScheduler) Start() {
 	go scheduler.run()
 }
 
-//run Cron
+//stop all
 func (scheduler *TaskScheduler) Stop() {
 	scheduler.stop <- struct{}{}
 }
