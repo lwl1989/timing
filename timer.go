@@ -5,7 +5,6 @@ import (
 	"log"
 	"github.com/google/uuid"
 	"os"
-	"fmt"
 )
 
 //compatible old name
@@ -95,7 +94,6 @@ func (scheduler *TaskScheduler) AddTask(task *Task) string {
 //if lock add to swap
 func (scheduler *TaskScheduler) addTask(task *Task) string  {
 	if scheduler.lock {
-		fmt.Println("locked")
 		scheduler.swap = append(scheduler.swap, task)
 		scheduler.add <- task
 	} else{
