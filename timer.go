@@ -5,7 +5,7 @@ import (
 	"log"
 	"github.com/google/uuid"
 	"os"
-	"fmt"
+	"sync"
 )
 
 //compatible old name
@@ -16,18 +16,21 @@ type OnceCron struct {
 //only exec cron timer cron
 type TaskScheduler struct {
 	tasks  []*Task
-	swap   []*Task
 	add    chan *Task
 	remove chan string
 	stop   chan struct{}
 	Logger *log.Logger
 	lock	bool
+	rwm		*sync.RWMutex
 }
+
 
 
 type Lock interface {
 	Lock()
-	UnLock()
+	Unlock()
+	RLock()
+	RUnlock()
 }
 
 //return old name with OnceCron
@@ -41,12 +44,12 @@ func NewCron() *OnceCron {
 func NewScheduler() *TaskScheduler {
 	return &TaskScheduler{
 		tasks:  make([]*Task, 0),
-		swap:   make([]*Task, 0),
 		add:    make(chan *Task),
 		stop:   make(chan struct{}),
 		remove: make(chan string),
 		Logger: log.New(os.Stdout, "[Control]: ", log.Ldate|log.Ltime|log.Lshortfile),
 		lock:	false,
+		rwm:    new(sync.RWMutex),
 	}
 }
 
@@ -63,6 +66,9 @@ func (scheduler *TaskScheduler) AddFuncSpace(spaceTime int64, endTime int64, f f
 
 //add func to list
 func (scheduler *TaskScheduler) AddFunc(unixTime int64, f func()) {
+	if unixTime < 100000000000 {
+		unixTime = unixTime * int64(time.Second)
+	}
 	task := getTaskWithFunc(unixTime, f)
 	scheduler.addTask(task)
 }
@@ -94,14 +100,8 @@ func (scheduler *TaskScheduler) AddTask(task *Task) string {
 
 //if lock add to swap
 func (scheduler *TaskScheduler) addTask(task *Task) string  {
-	if scheduler.lock {
-		fmt.Println("locked")
-		scheduler.swap = append(scheduler.swap, task)
-		scheduler.add <- task
-	} else{
-		scheduler.tasks = append(scheduler.tasks, task)
-		scheduler.add <- task
-	}
+
+	scheduler.add <- task
 
 	return task.Uuid
 }
@@ -171,7 +171,8 @@ func (scheduler *TaskScheduler) run() {
 				}
 
 				//if add task
-			case <-scheduler.add:
+			case add := <-scheduler.add:
+				scheduler.tasks = append(scheduler.tasks, add)
 				timer.Stop()
 				// remove task with remove uuid
 			case uuidstr := <-scheduler.remove:
@@ -190,8 +191,8 @@ func (scheduler *TaskScheduler) run() {
 
 //return a task and key In task list
 func (scheduler *TaskScheduler) GetTask() (task *Task, tempKey int) {
-	scheduler.Lock()
-	defer scheduler.UnLock()
+	scheduler.rwm.RLock()
+	defer scheduler.rwm.RUnlock()
 
 	min := scheduler.tasks[0].RunTime
 	tempKey = 0
@@ -217,8 +218,8 @@ func (scheduler *TaskScheduler) GetTask() (task *Task, tempKey int) {
 //if add a new task and runtime < now task runtime
 // stop now timer and again
 func (scheduler *TaskScheduler) doAndReset(key int) {
-	scheduler.Lock()
-	defer scheduler.UnLock()
+	scheduler.rwm.Lock()
+	defer scheduler.rwm.Unlock()
 	//null pointer
 	if key < len(scheduler.tasks) {
 
@@ -241,29 +242,12 @@ func (scheduler *TaskScheduler) doAndReset(key int) {
 
 //remove task by uuid
 func (scheduler *TaskScheduler) removeTask(uuidStr string) {
-	scheduler.Lock()
-	defer scheduler.UnLock()
+	scheduler.rwm.Lock()
+	defer scheduler.rwm.Unlock()
 	for key, task := range scheduler.tasks {
 		if task.Uuid == uuidStr {
 			scheduler.tasks = append(scheduler.tasks[:key], scheduler.tasks[key+1:]...)
 			break
 		}
 	}
-}
-
-//lock task []
-func (scheduler *TaskScheduler) Lock() {
-	scheduler.lock = true
-}
-
-//unlock task []
-func (scheduler *TaskScheduler) UnLock() {
-	scheduler.lock = false
-	if len(scheduler.swap) > 0 {
-		for _, task := range scheduler.swap {
-			scheduler.tasks = append(scheduler.tasks, task)
-		}
-		scheduler.swap = make([]*Task, 0)
-	}
-
 }

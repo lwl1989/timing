@@ -12,46 +12,49 @@ import (
 func Test_AddFunc(t *testing.T) {
 	cron := NewCron()
 
-	go cron.Start()
+	cron.Start()
 
-	cron.AddFunc(time.Now().UnixNano()+1, func() {
+	go cron.AddFunc(time.Now().UnixNano()+1*(int64(time.Second)), func() {
 		fmt.Println("one second after")
 	})
 
-	cron.AddFunc(time.Now().UnixNano()+1, func() {
+	go cron.AddFunc(time.Now().UnixNano()+2*(int64(time.Second)), func() {
 		fmt.Println("one second after, task second")
 	})
 
-	cron.AddFunc(time.Now().UnixNano()+10, func() {
+	go cron.AddFunc(time.Now().UnixNano()+10*(int64(time.Second)), func() {
 		fmt.Println("ten second after")
 	})
+
+	time.Sleep(20*time.Second)
 }
 
 //test add space task func
 func Test_AddFuncSpace(t *testing.T) {
 	cron := NewScheduler()
 
-	go cron.Start()
+	cron.Start()
 
-	cron.AddFuncSpace(1, time.Now().UnixNano()+10, func() {
+	go cron.AddFuncSpace(1, time.Now().UnixNano()+100*(int64(time.Second)), func() {
 		fmt.Println("one second after")
 	})
 
-	cron.AddFuncSpace(1, time.Now().UnixNano()+20,func() {
+	go cron.AddFuncSpace(2, time.Now().UnixNano()+100*(int64(time.Second)),func() {
 		fmt.Println("one second after, task second")
 	})
 
-	cron.AddFunc(time.Now().UnixNano()+10, func() {
+	go cron.AddFunc(time.Now().UnixNano()+10*(int64(time.Second)), func() {
 		fmt.Println("ten second after")
 	})
+	time.Sleep(20*time.Second)
 }
 
 //test add Task and timing add Task
 func Test_AddTask(t *testing.T) {
 	cron := NewCron()
-	go cron.Start()
+	cron.Start()
 
-	cron.AddTask(&Task{
+	go cron.AddTask(&Task{
 		Job:FuncJob(func() {
 			fmt.Println("hello cron")
 		}),
@@ -59,31 +62,19 @@ func Test_AddTask(t *testing.T) {
 	})
 
 
-	cron.AddTask(&Task{
+	go cron.AddTask(&Task{
 		Job:FuncJob(func() {
 			fmt.Println("hello cron1")
 		}),
 		RunTime:time.Now().UnixNano()+3,
 	})
 
-	cron.AddTask(&Task{
+	go cron.AddTask(&Task{
 		Job: FuncJob(func() {
 			fmt.Println("hello cron2")
 		}),
 		RunTime: time.Now().UnixNano() + 4,
 	})
 
-	timer := time.NewTimer(10 * time.Second)
-	for {
-		select {
-		case <-timer.C:
-			cron.AddTask(&Task{
-				Job: FuncJob(func() {
-					fmt.Println("hello cron2")
-				}),
-				RunTime: time.Now().UnixNano() + 1,
-			})
-		}
-		break
-	}
+	time.Sleep(20*time.Second)
 }
