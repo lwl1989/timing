@@ -30,7 +30,7 @@ func getTaskWithFunc(unixTime int64, f func()) *Task {
 	return &Task{
 		Job:     FuncJob(f),
 		RunTime: unixTime,
-		Uuid:uuid.New().String(),
+		Uuid:	 uuid.New().String(),
 	}
 }
 
@@ -41,7 +41,7 @@ func getTaskWithFuncSpacingNumber(spacing int64, number int, f func()) *Task {
 		Spacing: spacing,
 		Number:  number,
 		EndTime: time.Now().UnixNano()+ int64(number)*spacing*int64(time.Second),
-		Uuid:uuid.New().String(),
+		Uuid:	 uuid.New().String(),
 	}
 }
 func getTaskWithFuncSpacing(spacing int64, endTime int64, f func()) *Task {
@@ -50,7 +50,7 @@ func getTaskWithFuncSpacing(spacing int64, endTime int64, f func()) *Task {
 		RunTime: time.Now().UnixNano()+ int64(time.Second)*spacing,
 		Spacing: spacing,
 		EndTime: endTime,
-		Uuid:uuid.New().String(),
+		Uuid:	 uuid.New().String(),
 	}
 }
 
