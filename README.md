@@ -10,7 +10,7 @@ A one-off timed task.
 
 [2018-05-22]  Export Success
 [2018-05-22]  Renamed to TaskScheduler
-
+[2019-02-23]  Add task interface and user can rewrite the logic
 
 
 ### Quick Start
@@ -66,9 +66,41 @@ scheduler.AddTask(&Task{
 })
 ```
 
+### task interface
+
+if you logic can not use the task
+
+you can rewrite a new task and implement TaskInterface
+
+```
+type TaskInterface interface {
+    TaskGetInterface
+    TaskSetInterface
+}
+
+type TaskSetInterface interface {
+    SetJob(job Job) TaskSetInterface
+    SetRuntime(runtime int64) TaskSetInterface
+    SetUuid(uuid string) TaskSetInterface
+    SetSpacing(spacing int64) TaskSetInterface
+    SetEndTime(endTime int64) TaskSetInterface
+    SetRunNumber(number int) TaskSetInterface
+}
+
+type TaskGetInterface interface{
+    RunJob()
+    GetJob()  Job
+    GetUuid() string
+    GetRunTime() int64
+    GetSpacing() int64
+    GetEndTime() int64
+    GetRunNumber() int
+}
+```
+
 ### next
 
-1. Add export task and import task[2018-05-22 done]
+1. distributed the cron task
 
 
 ### example
