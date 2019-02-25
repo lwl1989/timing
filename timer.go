@@ -152,7 +152,7 @@ func (scheduler *TaskScheduler) run() {
 
 		var d time.Duration
 		if i64 < 0 {
-			scheduler.tasks[key].GetRunTime() = now.UnixNano()
+			scheduler.tasks[key].SetRuntime(now.UnixNano())
 			if task != nil {
 				go task.RunJob()
 			}
