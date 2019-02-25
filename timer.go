@@ -198,7 +198,7 @@ func (scheduler *TaskScheduler) run() {
 }
 
 //return a task and key In task list
-func (scheduler *TaskScheduler) GetTask() (task TaskInterface, tempKey int) {
+func (scheduler *TaskScheduler) GetTask() (task TaskGetInterface, tempKey int) {
 	scheduler.Lock()
 	defer scheduler.UnLock()
 
@@ -206,14 +206,14 @@ func (scheduler *TaskScheduler) GetTask() (task TaskInterface, tempKey int) {
 	tempKey = 0
 
 	for key, task := range scheduler.tasks {
-
-		if min <= task.GetRunTime() {
+        tTime := task.GetRunTime()
+		if min <= tTime {
 			continue
 		}
-		if min > task.GetRunTime() {
+		if min > tTime {
 			tempKey = key
 
-			min = task.GetRunTime()
+			min = tTime
 			continue
 		}
 	}
@@ -235,12 +235,13 @@ func (scheduler *TaskScheduler) doAndReset(key int) {
 		scheduler.tasks = append(scheduler.tasks[:key], scheduler.tasks[key+1:]...)
 
 		if nowTask.GetSpacing() > 0 {
-			nowTask.SetRuntime(nowTask.GetSpacing() * int64(time.Second) + nowTask.GetRunTime())
+            tTime := nowTask.GetRunTime()
+			nowTask.SetRuntime(nowTask.GetSpacing() * int64(time.Second) + tTime)
 			number := nowTask.GetRunNumber()
 			if number > 1 {
 				nowTask.SetRunNumber(number - 1)
 				scheduler.tasks = append(scheduler.tasks, nowTask)
-			} else if nowTask.GetEndTime() >= nowTask.GetRunTime() {
+			} else if nowTask.GetEndTime() >= tTime {
 				scheduler.tasks = append(scheduler.tasks, nowTask)
 			}
 		}
