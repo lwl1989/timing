@@ -8,9 +8,11 @@ A one-off timed task.
 
 ### ChangeLog
 
-[2018-05-22]  Export Success
-[2018-05-22]  Renamed to TaskScheduler
-[2019-02-23]  Add task interface and user can rewrite the logic
+[2018-05-22]  Add Export
+
+[2018-05-22]  Renamed Tasks to TaskScheduler
+
+[2019-02-23]  Add task interface and can rewrite the logic
 
 
 ### Quick Start
