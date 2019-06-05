@@ -14,17 +14,26 @@ func Test_AddFunc(t *testing.T) {
 
 	go cron.Start()
 
-	cron.AddFunc(time.Now().UnixNano()+1, func() {
+	cron.AddFunc(time.Now().UnixNano()+int64(time.Second*1), func() {
 		fmt.Println("one second after")
 	})
 
-	cron.AddFunc(time.Now().UnixNano()+1, func() {
+	cron.AddFunc(time.Now().UnixNano()+int64(time.Second*1), func() {
 		fmt.Println("one second after, task second")
 	})
 
-	cron.AddFunc(time.Now().UnixNano()+10, func() {
+	cron.AddFunc(time.Now().UnixNano()+int64(time.Second*10), func() {
 		fmt.Println("ten second after")
 	})
+
+    timer := time.NewTimer(11 * time.Second)
+    for {
+        select {
+        case <-timer.C:
+            fmt.Println("over")
+        }
+        break
+    }
 }
 
 //test add space task func
@@ -33,17 +42,25 @@ func Test_AddFuncSpace(t *testing.T) {
 
 	go cron.Start()
 
-	cron.AddFuncSpace(1, time.Now().UnixNano()+10, func() {
+	cron.AddFuncSpace(1, time.Now().UnixNano()+int64(time.Second*1), func() {
 		fmt.Println("one second after")
 	})
 
-	cron.AddFuncSpace(1, time.Now().UnixNano()+20,func() {
+	cron.AddFuncSpace(1, time.Now().UnixNano()+int64(time.Second*20),func() {
 		fmt.Println("one second after, task second")
 	})
 
-	cron.AddFunc(time.Now().UnixNano()+10, func() {
+	cron.AddFunc(time.Now().UnixNano()+int64(time.Second*10), func() {
 		fmt.Println("ten second after")
 	})
+    timer := time.NewTimer(11 * time.Second)
+    for {
+        select {
+        case <-timer.C:
+            fmt.Println("over")
+        }
+        break
+    }
 }
 
 //test add Task and timing add Task
@@ -55,7 +72,7 @@ func Test_AddTask(t *testing.T) {
 		Job:FuncJob(func() {
 			fmt.Println("hello cron")
 		}),
-		RunTime:time.Now().UnixNano()+2,
+		RunTime:time.Now().UnixNano()+int64(time.Second*2),
 	})
 
 
@@ -63,26 +80,21 @@ func Test_AddTask(t *testing.T) {
 		Job:FuncJob(func() {
 			fmt.Println("hello cron1")
 		}),
-		RunTime:time.Now().UnixNano()+3,
+		RunTime:time.Now().UnixNano()+int64(time.Second*3),
 	})
 
 	cron.AddTask(&Task{
 		Job: FuncJob(func() {
 			fmt.Println("hello cron2")
 		}),
-		RunTime: time.Now().UnixNano() + 4,
+		RunTime: time.Now().UnixNano() + +int64(time.Second*4),
 	})
 
 	timer := time.NewTimer(10 * time.Second)
 	for {
 		select {
 		case <-timer.C:
-			cron.AddTask(&Task{
-				Job: FuncJob(func() {
-					fmt.Println("hello cron2")
-				}),
-				RunTime: time.Now().UnixNano() + 1,
-			})
+		    fmt.Println("over")
 		}
 		break
 	}
