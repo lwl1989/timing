@@ -32,6 +32,10 @@ type TaskGetInterface interface{
     GetRunNumber() int
 }
 
+type TaskLogInterface interface {
+    Println(v ...interface{})
+}
+
 func (task *Task) SetJob(job Job) TaskSetInterface {
     task.Job = job
     return task

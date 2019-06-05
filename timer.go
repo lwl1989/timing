@@ -19,7 +19,7 @@ type TaskScheduler struct {
 	add    chan TaskInterface
 	remove chan string
 	stop   chan struct{}
-	Logger *log.Logger
+	Logger TaskLogInterface
 	lock	bool
 }
 
