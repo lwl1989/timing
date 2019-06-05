@@ -70,9 +70,9 @@ scheduler.AddTask(&Task{
 
 ### task interface
 
-if you logic can not use the task
+if you need rewrite  a new task
 
-you can rewrite a new task and implement TaskInterface
+just implement TaskInterface
 
 ```
 type TaskInterface interface {
