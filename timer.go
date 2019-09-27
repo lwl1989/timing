@@ -52,18 +52,18 @@ func NewScheduler() *TaskScheduler {
 //add spacing time job to list with number
 func (scheduler *TaskScheduler) AddFuncSpaceNumber(spaceTime int64, number int, f func()) {
 	task := getTaskWithFuncSpacingNumber(spaceTime, number, f)
-	scheduler.addTask(task)
+	scheduler.AddTask(task)
 }
 //add spacing time job to list with endTime
 func (scheduler *TaskScheduler) AddFuncSpace(spaceTime int64, endTime int64, f func()) {
 	task := getTaskWithFuncSpacing(spaceTime, endTime, f)
-	scheduler.addTask(task)
+	scheduler.AddTask(task)
 }
 
 //add func to list
 func (scheduler *TaskScheduler) AddFunc(unixTime int64, f func()) {
 	task := getTaskWithFunc(unixTime, f)
-	scheduler.addTask(task)
+	scheduler.AddTask(task)
 }
 
 func (scheduler *TaskScheduler) AddTaskInterface(task TaskInterface) {
