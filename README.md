@@ -70,9 +70,9 @@ scheduler.AddTask(&Task{
 
 ### task interface
 
-if you need rewrite  a new task
+If you need rewrite a new task
 
-just implement TaskInterface
+implement TaskInterface
 
 ```
 type TaskInterface interface {
@@ -105,9 +105,9 @@ type TaskGetInterface interface{
 1. distributed the cron task
 
 
-### example
+### Example
 
-1. when user order expire, change order status => fail
-2. Timing of the message like[fcm-message](https://github.com/lwl1989/TTTask)
+Order expire, change order status => fail
+Timing of the send message
 
-and......
+and more
