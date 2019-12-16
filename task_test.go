@@ -1,6 +1,8 @@
 package timer
 
 import (
+    "log"
+    "os"
     "testing"
     "time"
     "fmt"
@@ -57,14 +59,14 @@ func Test_AddFunc(t *testing.T) {
 //test add space task func
 func Test_AddFuncSpace(t *testing.T) {
     cron := GetTaskScheduler()
-
+    log.SetOutput(os.Stdout)
     go cron.Start()
 
-    cron.AddFuncSpace(1, time.Now().UnixNano()+int64(time.Second*1), func() {
+    cron.AddFuncSpace(int64(time.Second*1), time.Now().UnixNano(), func() {
         fmt.Println("one second after")
     })
 
-    cron.AddFuncSpace(1, time.Now().UnixNano()+int64(time.Second*20),func() {
+    cron.AddFuncSpace(int64(time.Second*1), time.Now().UnixNano(), func() {
         fmt.Println("one second after, task second")
     })
 

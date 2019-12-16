@@ -1,9 +1,10 @@
 package timer
 
 import (
+    "fmt"
     "github.com/pkg/errors"
     "runtime"
-    "fmt"
+    "time"
 )
 
 //default Job
@@ -52,15 +53,12 @@ func (j *TaskJob) run() {
         }
     }()
 
-
-    j.Fn()
-
     defer func() {
         if !isPanic {
             j.done <- true
         }
     }()
-
+    j.Fn()
 }
 
 func (j *TaskJob) Stop(){
@@ -93,12 +91,29 @@ func (j *TaskJob) Run(){
             }
 
             task := j.GetTask()
-            task.SetRuntime(task.GetRunTime() + task.GetSpacing())
-            TS.addTask(task)
-            TS.tasks.Range(func(key, value interface{}) bool {
-                fmt.Println(key, value)
-                return  true
-            })
+            loop := false
+            now := time.Now().UnixNano()
+            if task.GetRunNumber() > 1 {
+                task.SetRunNumber(task.GetRunNumber() - 1)
+                loop = true
+            }else if task.GetEndTime() > now {
+                loop = true
+            }
+            if loop {
+                spacing := task.GetSpacing()
+                fmt.Println(spacing)
+                if spacing > 0 {
+                    //not use old time
+                    //task.SetRuntime(task.GetRunTime() + task.GetSpacing())
+                    task.SetRuntime(now + spacing)
+                    TS.addTaskChannel(task)
+                }
+            }
+
+
+            //TS.tasks.Range(func(key, value interface{}) bool {
+            //    return  true
+            //})
             return
         case <-j.stop:
             //todo:

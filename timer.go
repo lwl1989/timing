@@ -1,9 +1,10 @@
 package timer
 
 import (
-    "time"
-    "log"
+    "fmt"
     "github.com/google/uuid"
+    "log"
+    "time"
 )
 
 
@@ -13,6 +14,7 @@ func (scheduler *TaskScheduler) AddFuncSpaceNumber(spaceTime int64, number int, 
     scheduler.AddTask(task)
 }
 //add spacing time job to list with endTime
+//spaceTime is nano time
 func (scheduler *TaskScheduler) AddFuncSpace(spaceTime int64, endTime int64, f func()) {
     task := getTaskWithFuncSpacing(spaceTime, endTime, f)
     scheduler.AddTask(task)
@@ -25,22 +27,28 @@ func (scheduler *TaskScheduler) AddFunc(unixTime int64, f func()) {
 }
 
 func (scheduler *TaskScheduler) AddTaskInterface(task TaskInterface) {
-    scheduler.addTask(task)
+    scheduler.addTaskChannel(task)
 }
 
 //add a task to list
 func (scheduler *TaskScheduler) AddTask(task *Task) string {
+    now := time.Now().UnixNano()
     if task.RunTime != 0 {
-        if task.RunTime < 100000000000 {
+        if task.RunTime < 9999999999 {
             task.RunTime = task.RunTime * int64(time.Second)
         }
-        if task.RunTime < time.Now().UnixNano() {
-            //延遲1秒
-            task.RunTime = time.Now().UnixNano() + int64(time.Second)
+        if task.RunTime <= now {
+
+            if task.Spacing > 0 {
+                task.RunTime = now + task.Spacing
+            }else {
+                //延遲1秒
+                task.RunTime = now + int64(time.Second)
+            }
         }
     } else {
         if task.Spacing > 0 {
-            task.RunTime = time.Now().UnixNano() + task.Spacing * int64(time.Second)
+            task.RunTime = now + task.Spacing
         }else{
             scheduler.Logger.Println("error too add task! Runtime error")
             return ""
@@ -50,14 +58,17 @@ func (scheduler *TaskScheduler) AddTask(task *Task) string {
     if task.Uuid == "" {
         task.Uuid = uuid.New().String()
     }
-    return scheduler.addTask(task)
+    scheduler.addTaskChannel(task)
+    return task.GetUuid()
 }
 
-//if lock add to swap
 func (scheduler *TaskScheduler) addTask(task TaskInterface) string  {
     scheduler.tasks.Store(task.GetUuid(), task)
-
     return task.GetUuid()
+}
+
+func  (scheduler *TaskScheduler)  addTaskChannel(task TaskInterface) {
+    scheduler.add <- task
 }
 //new export
 func (scheduler *TaskScheduler) ExportInterface() []TaskInterface {
@@ -113,23 +124,31 @@ func (scheduler *TaskScheduler) run() {
     for {
         now := time.Now()
         task := scheduler.GetTask()
-        task.GetJob().SetTask(task)
-        runTime := task.GetRunTime()
-        i64 := runTime - now.UnixNano()
-
         var d time.Duration
-        if i64 < 0 {
-            task.SetRuntime(now.UnixNano())
-            task.SetStatus(1)
-            go task.RunJob()
-            continue
-        } else {
-            sec := runTime / int64(time.Second)
-            nsec := runTime % int64(time.Second)
+        if task == nil {
+            d = 1 * time.Second
+        }else{
+            task.GetJob().SetTask(task)
+            runTime := task.GetRunTime()
+            i64 := runTime - now.UnixNano()
+            if i64 < 0 {
+                if task.GetSpacing() > 0 {
+                    task.SetRuntime(now.UnixNano() + task.GetSpacing())
+                }else{
+                    task.SetRuntime(now.UnixNano() + int64(time.Second))
+                }
+                task.SetStatus(1)
+                go task.RunJob()
+                continue
+            } else {
+                sec := runTime / int64(time.Second)
+                nsec := runTime % int64(time.Second)
 
-            d = time.Unix(sec, nsec).Sub(now)
+                d = time.Unix(sec, nsec).Sub(now)
+            }
         }
 
+        fmt.Println(d)
         timer := time.NewTimer(d)
 
         //catch a chan and do something
@@ -137,10 +156,14 @@ func (scheduler *TaskScheduler) run() {
             select {
             //if time has expired do task and shift key if is task list
             case <-timer.C:
+                fmt.Println("run")
+                //not get remove,just run
+                scheduler.removeTask(task.GetUuid())
                 go task.RunJob()
                 timer.Stop()
                 //if add task
-            case <-scheduler.add:
+            case t1 := <-scheduler.add:
+                scheduler.addTask(t1)
                 timer.Stop()
                 // remove task with remove uuid
             case uuidStr := <-scheduler.remove:
@@ -180,7 +203,9 @@ func (scheduler *TaskScheduler) GetTask() (task TaskInterface) {
         return true
     })
 
-    scheduler.tasks.Delete(task.GetUuid())
+    //if task != nil {
+    //    scheduler.removeTask(task.GetUuid())
+    //}
     return task
 }
 
