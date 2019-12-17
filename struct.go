@@ -20,7 +20,7 @@ type TaskScheduler struct {
 
 //need to do task has interface Job
 type Task struct {
-    Job     IJob    `json:"job"`
+    Job     *taskJob    `json:"job"`
     Uuid    string  `json:"uuid"`
     RunTime int64   `json:"run_time"`//UnixNanoTime
     Spacing int64	`json:"spacing"`//spacing sencond

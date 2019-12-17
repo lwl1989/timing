@@ -156,7 +156,6 @@ func (scheduler *TaskScheduler) run() {
             select {
             //if time has expired do task and shift key if is task list
             case <-timer.C:
-                fmt.Println("run")
                 //not get remove,just run
                 scheduler.removeTask(task.GetUuid())
                 go task.RunJob()
