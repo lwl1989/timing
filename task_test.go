@@ -73,6 +73,10 @@ func Test_AddFuncSpace(t *testing.T) {
 	cron.AddFunc(time.Now().UnixNano()+int64(time.Second*10), func() {
 		fmt.Println("ten second after")
 	})
+
+	cron.AddFuncSpaceNumber(int64(time.Second*1), 10, func() {
+        fmt.Println("number 10")
+    })
 	timer := time.NewTimer(11 * time.Second)
 	for {
 		select {
