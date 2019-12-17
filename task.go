@@ -34,7 +34,7 @@ func (task *Task) GetRunNumber() int {
 	return task.Number
 }
 
-func (task *Task) SetJob(job IJob) TaskSetInterface {
+func (task *Task) SetJob(job *taskJob) TaskSetInterface {
 	task.Job = job
 	return task
 }
