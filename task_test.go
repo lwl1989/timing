@@ -85,9 +85,11 @@ func Test_AddTask(t *testing.T) {
 
 	cron.AddTask(&Task{
 		Job: FuncJob(func() {
-			fmt.Println("hello cron2")
+			fmt.Println("hello cron2 loop")
 		}),
-		RunTime: time.Now().UnixNano() + +int64(time.Second*4),
+		RunTime: time.Now().UnixNano() + int64(time.Second*4),
+		Spacing: 1,
+		EndTime: time.Now().UnixNano() + 9*(int64(time.Second)),
 	})
 
 	timer := time.NewTimer(10 * time.Second)

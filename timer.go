@@ -71,22 +71,21 @@ func (scheduler *TaskScheduler) AddTaskInterface(task TaskInterface) {
 }
 //add a task to list
 func (scheduler *TaskScheduler) AddTask(task *Task) string {
-	if task.RunTime != 0 {
-		if task.RunTime < 100000000000 {
-			task.RunTime = task.RunTime * int64(time.Second)
-		}
-		if task.RunTime < time.Now().UnixNano() {
-			//延遲1秒
-			task.RunTime = time.Now().UnixNano() + int64(time.Second)
-		}
-	} else {
-		if task.Spacing > 0 {
-			task.RunTime = time.Now().UnixNano() + task.Spacing * int64(time.Second)
-		}else{
-			scheduler.Logger.Println("error too add task! Runtime error")
-			return ""
-		}
+	if task.RunTime < 100000000000 {
+		task.RunTime = task.RunTime * int64(time.Second)
 	}
+	if task.RunTime < time.Now().UnixNano() {
+		//延遲1秒
+		task.RunTime = time.Now().UnixNano() + int64(time.Second)
+	}
+
+	//if task.Spacing > 0 {
+	//		task.RunTime = time.Now().UnixNano() + int64(time.Second)
+	//}else{
+	//	scheduler.Logger.Println("error too add task! Runtime error")
+	//	return ""
+	//}
+
 
 	if task.Uuid == "" {
 		task.Uuid = uuid.New().String()
@@ -147,6 +146,10 @@ func (scheduler *TaskScheduler) run() {
 
 		now := time.Now()
 		task, key := scheduler.GetTask()
+		//0 阻断
+		if key < 0 {
+			continue
+		}
 		runTime := task.GetRunTime()
 		i64 := runTime - now.UnixNano()
 
@@ -202,6 +205,9 @@ func (scheduler *TaskScheduler) GetTask() (task TaskGetInterface, tempKey int) {
 	scheduler.Lock()
 	defer scheduler.UnLock()
 
+	if len(scheduler.tasks) < 1 {
+		return nil,-1
+	}
 	min := scheduler.tasks[0].GetRunTime()
 	tempKey = 0
 

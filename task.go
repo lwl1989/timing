@@ -12,7 +12,7 @@ type Task struct {
 	Job     Job
 	Uuid    string
 	RunTime int64   //UnixNanoTime
-	Spacing int64	//spacing sencond
+	Spacing int64	//spacing second
 	EndTime int64   //UnixNanoTime
 	Number  int //exec number
 }
