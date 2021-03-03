@@ -142,11 +142,9 @@ func TestJobEvent(t *testing.T) {
 		RunTime: time.Now().UnixNano() + int64(time.Second)*1,
 		Spacing: int64(3 * time.Second),
 		EndTime: time.Now().UnixNano() + int64(time.Second*20),
-		Uuid:    "123",
+		Uuid:    "test",
 	}
 	f1 := func(reply Reply) {
-		fmt.Println(reply)
-		fmt.Println("It's reply")
 		log.Println("task uuid:" + reply.Ts.GetUuid() + " run start")
 		log.Println("task uuid:" + reply.Ts.GetUuid() + " start time" + utils.GetTimeString())
 	}
@@ -192,7 +190,6 @@ func TestJobStopEvent(t *testing.T) {
 	f := func() {
 		fmt.Println("now is run job")
 		time.Sleep(1 * time.Second)
-		fmt.Println("now job success")
 	}
 	t1 := &Task{
 		Job:     getJob(f),

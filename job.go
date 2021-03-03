@@ -68,7 +68,7 @@ func (j *taskJob) loop() {
 //run job and catch error
 func (j *taskJob) Run() {
 	if f, ok := j.replies["start"]; ok {
-		f(Reply{})
+		f(GetReply(j.Task, "-1", "start running", nil))
 	}
 
 	go func() {
@@ -89,7 +89,7 @@ func (j *taskJob) Run() {
 		//获取到终止信号
 		case <-j.ctx.Done():
 			if f, ok := j.replies["stop"]; ok {
-				f(GetReply(j.Task, "-1", "手动终止", nil))
+				f(GetReply(j.Task, "-1", "stop running", nil))
 			}
 			j.close()
 			return

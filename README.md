@@ -65,17 +65,96 @@ type taskJob struct {
 
 example:
 ```
-    t1 := &Task{
-        Job:     getJob(f),
-        RunTime: time.Now().UnixNano() + int64(time.Second)*1,
-        Spacing: int64(3 * time.Second),
-        EndTime: time.Now().UnixNano() + int64(time.Second*20),
-        Uuid:    "123",
-    }
-    f1 := func(reply Reply) {
-        fmt.Println(reply)
-        fmt.Println("It's reply")
-    }
-    t1.GetJob().OnStart(f1)
-    cron.AddTask(t1)
+cron := GetTaskScheduler()
+	cron.Start()
+	f := func() {
+		fmt.Println("now is run job")
+		time.Sleep(1 * time.Second)
+		fmt.Println("now job success")
+	}
+	t1 := &Task{
+		Job:     getJob(f),
+		RunTime: time.Now().UnixNano() + int64(time.Second)*1,
+		Spacing: int64(3 * time.Second),
+		EndTime: time.Now().UnixNano() + int64(time.Second*20),
+		Uuid:    "123",
+	}
+	f1 := func(reply Reply) {
+		log.Println("task uuid:" + reply.Ts.GetUuid() + " run start")
+		log.Println("task uuid:" + reply.Ts.GetUuid() + " start time" + utils.GetTimeString())
+	}
+	t1.GetJob().OnStart(f1)
+	t1.GetJob().OnFinish(func(reply Reply) {
+		log.Println("task uuid:" + reply.Ts.GetUuid() + "success")
+		log.Println("task uuid:" + reply.Ts.GetUuid() + " finish time" + utils.GetTimeString())
+	})
+	cron.AddTask(t1)
+
+	timer := time.NewTimer(10 * time.Second)
+	for {
+		select {
+		case <-timer.C:
+			fmt.Println("over")
+		}
+		break
+	}
+```
+
+执行结果
+```
+=== RUN   TestJobEvent
+2021/03/03 18:03:52 task uuid:test run start
+2021/03/03 18:03:52 task uuid:test start time2021-03-03 18:03:52
+now is run job
+now job success
+2021/03/03 18:03:53 task uuid:testsuccess
+2021/03/03 18:03:53 task uuid:test finish time2021-03-03 18:03:53
+2021/03/03 18:03:56 task uuid:test run start
+2021/03/03 18:03:56 task uuid:test start time2021-03-03 18:03:56
+now is run job
+now job success
+2021/03/03 18:03:57 task uuid:testsuccess
+2021/03/03 18:03:57 task uuid:test finish time2021-03-03 18:03:57
+2021/03/03 18:04:00 task uuid:test run start
+2021/03/03 18:04:00 task uuid:test start time2021-03-03 18:04:00
+now is run job
+over
+--- PASS: TestJobEvent (10.00s)
+```
+
+手动停止正在执行的任务：
+```
+cron := GetTaskScheduler()
+	cron.Start()
+	f := func() {
+		fmt.Println("now is run job")
+		time.Sleep(1 * time.Second)
+	}
+	t1 := &Task{
+		Job:     getJob(f),
+		RunTime: time.Now().UnixNano() + int64(time.Second)*1,
+		Spacing: int64(2 * time.Second),
+		EndTime: time.Now().UnixNano() + int64(time.Second*20),
+		Uuid:    "123",
+	}
+	f1 := func(reply Reply) {
+		log.Println("task uuid:" + reply.Ts.GetUuid() + " stop time" + utils.GetTimeString())
+	}
+	t1.GetJob().OnStop(f1)
+	cron.AddTask(t1)
+
+	go func() {
+		t2 := time.NewTimer(2 * time.Second)
+		<-t2.C
+		cron.StopOnce("123")
+	}()
+```
+
+执行结果
+```
+=== RUN   TestJobStopEvent
+now is run job
+2021/03/03 18:07:22 task uuid:123 stop time2021-03-03 18:07:22
+over
+--- PASS: TestJobStopEvent (10.00s)
 ```
