@@ -1,6 +1,7 @@
 package timer
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"time"
@@ -80,14 +81,18 @@ func (task *Task) GetStatus() int {
 func GetJob(f func()) *taskJob {
 	return getJob(f)
 }
+
 //get a new Job
 func getJob(f func()) *taskJob {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
 	return &taskJob{
 		Fn:      f,
-		stop:    make(chan bool, 1),
-		err:     make(chan error, 1),
-		done:    make(chan bool, 1),
+		finish:  make(chan interface{}),
 		replies: make(map[string]func(reply Reply)),
+		ctx:     ctx,
+		cancel:  cancel,
 	}
 }
 

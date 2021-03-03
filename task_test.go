@@ -2,6 +2,8 @@ package timer
 
 import (
 	"fmt"
+	"github.com/google/uuid"
+	"github.com/grestful/utils"
 	"log"
 	"os"
 	"testing"
@@ -32,18 +34,22 @@ func TestTime(t *testing.T) {
 func Test_AddFunc(t *testing.T) {
 	cron := GetTaskScheduler()
 
-	go cron.Start()
-
+	cron.Start()
 	cron.AddFunc(time.Now().UnixNano()+int64(time.Second*1), func() {
 		fmt.Println("one second after")
 	})
 
 	cron.AddFunc(time.Now().UnixNano()+int64(time.Second*1), func() {
-		fmt.Println("one second after, task second")
+		fmt.Println("one second after 1, task second")
 	})
 
 	cron.AddFunc(time.Now().UnixNano()+int64(time.Second*10), func() {
 		fmt.Println("ten second after")
+	})
+
+	cron.tasks.Range(func(key, value interface{}) bool {
+		fmt.Println(key, value)
+		return true
 	})
 
 	timer := time.NewTimer(11 * time.Second)
@@ -75,8 +81,8 @@ func Test_AddFuncSpace(t *testing.T) {
 	})
 
 	cron.AddFuncSpaceNumber(int64(time.Second*1), 10, func() {
-        fmt.Println("number 10")
-    })
+		fmt.Println("number 10")
+	})
 	timer := time.NewTimer(11 * time.Second)
 	for {
 		select {
@@ -123,11 +129,13 @@ func Test_AddTask(t *testing.T) {
 	}
 }
 
-func Test_JobStartEvent(t *testing.T) {
+func TestJobEvent(t *testing.T) {
 	cron := GetTaskScheduler()
 	cron.Start()
 	f := func() {
-		fmt.Println("hello")
+		fmt.Println("now is run job")
+		time.Sleep(1 * time.Second)
+		fmt.Println("now job success")
 	}
 	t1 := &Task{
 		Job:     getJob(f),
@@ -139,9 +147,71 @@ func Test_JobStartEvent(t *testing.T) {
 	f1 := func(reply Reply) {
 		fmt.Println(reply)
 		fmt.Println("It's reply")
+		log.Println("task uuid:" + reply.Ts.GetUuid() + " run start")
+		log.Println("task uuid:" + reply.Ts.GetUuid() + " start time" + utils.GetTimeString())
 	}
 	t1.GetJob().OnStart(f1)
+	t1.GetJob().OnFinish(func(reply Reply) {
+		log.Println("task uuid:" + reply.Ts.GetUuid() + "success")
+		log.Println("task uuid:" + reply.Ts.GetUuid() + " finish time" + utils.GetTimeString())
+	})
 	cron.AddTask(t1)
+
+	timer := time.NewTimer(10 * time.Second)
+	for {
+		select {
+		case <-timer.C:
+			fmt.Println("over")
+		}
+		break
+	}
+}
+
+func TestTaskLoop(t *testing.T) {
+	fmt.Println(uuid.New().String())
+	fmt.Println(uuid.New().String())
+	fmt.Println(uuid.New().String())
+	fmt.Println(uuid.New().String())
+	fmt.Println(uuid.New().String())
+
+	//f := func() {
+	//	fmt.Println("hello")
+	//}
+	//t1 := &Task{
+	//	Job:     getJob(f),
+	//	RunTime: time.Now().UnixNano() + int64(time.Second)*1,
+	//	Spacing: int64(3 * time.Second),
+	//	EndTime: time.Now().UnixNano() + int64(time.Second*20),
+	//	Uuid:    "123",
+	//}
+}
+
+func TestJobStopEvent(t *testing.T) {
+	cron := GetTaskScheduler()
+	cron.Start()
+	f := func() {
+		fmt.Println("now is run job")
+		time.Sleep(1 * time.Second)
+		fmt.Println("now job success")
+	}
+	t1 := &Task{
+		Job:     getJob(f),
+		RunTime: time.Now().UnixNano() + int64(time.Second)*1,
+		Spacing: int64(2 * time.Second),
+		EndTime: time.Now().UnixNano() + int64(time.Second*20),
+		Uuid:    "123",
+	}
+	f1 := func(reply Reply) {
+		log.Println("task uuid:" + reply.Ts.GetUuid() + " stop time" + utils.GetTimeString())
+	}
+	t1.GetJob().OnStop(f1)
+	cron.AddTask(t1)
+
+	go func() {
+		t2 := time.NewTimer(2 * time.Second)
+		<-t2.C
+		cron.StopOnce("123")
+	}()
 
 	timer := time.NewTimer(10 * time.Second)
 	for {

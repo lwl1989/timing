@@ -1,18 +1,19 @@
 package timer
 
 import (
-    "github.com/pkg/errors"
-    "runtime"
-    "time"
+	"context"
+	"errors"
+	"runtime"
+	"time"
 )
 
 //default Job
 type taskJob struct {
 	Fn      func()
-	err     chan error
-	done    chan bool
-	stop    chan bool
+	finish  chan interface{}
 	replies map[string]func(reply Reply)
+	ctx     context.Context
+	cancel  context.CancelFunc
 	Task    TaskInterface
 }
 
@@ -40,28 +41,28 @@ func (j *taskJob) OnError(f func(reply Reply)) {
 	j.replies["error"] = f
 }
 
-func (j *taskJob) run() {
+func (j *taskJob) loop() {
 
-	isPanic := false
-	defer func() {
-		if x := recover(); x != nil {
-			err := errors.Errorf("job error with panic:%v", x)
-			j.err <- err
-			isPanic = true
-			return
+	task := j.GetTask()
+	loop := false
+	now := time.Now().UnixNano()
+	spacing := task.GetSpacing()
+	if task.GetRunNumber() > 1 {
+		task.SetRunNumber(task.GetRunNumber() - 1)
+		loop = true
+	} else if task.GetEndTime() > now && spacing > 0 {
+		loop = true
+	}
+
+	if loop {
+		if spacing > 0 {
+			//must use now time
+			//task.SetRuntime(task.GetRunTime() + task.GetSpacing())
+			task.SetRuntime(now + spacing)
+			TS.addTaskChannel(task)
 		}
-	}()
+	}
 
-	defer func() {
-		if !isPanic {
-			j.done <- true
-		}
-	}()
-	j.Fn()
-}
-
-func (j *taskJob) Stop() {
-	j.stop <- true
 }
 
 //run job and catch error
@@ -70,57 +71,53 @@ func (j *taskJob) Run() {
 		f(Reply{})
 	}
 
-	go j.run()
+	go func() {
+		defer func() {
+			e := recover()
+			if e != nil {
+				if f, ok := j.replies["error"]; ok {
+					f(getDefaultErrorReply(j.Task, panicToError(e)))
+				}
+			} else {
+				j.finish <- true
+			}
+		}()
+		j.Fn()
+	}()
 	for {
 		select {
-		case e := <-j.err:
-			if f, ok := j.replies["error"]; ok {
-				reply := Reply{
-					Code: 500,
-					Msg:  e.Error(),
-					Err:  e,
-				}
-				f(reply)
+		//获取到终止信号
+		case <-j.ctx.Done():
+			if f, ok := j.replies["stop"]; ok {
+				f(GetReply(j.Task, "-1", "手动终止", nil))
 			}
+			j.close()
 			return
-		case <-j.done:
+		case <-j.finish:
 			if f, ok := j.replies["finish"]; ok {
-				f(successResult)
+				f(getDefaultSuccessReply(j.Task))
 			}
-
-			task := j.GetTask()
-			loop := false
-			now := time.Now().UnixNano()
-			if task.GetRunNumber() > 1 {
-				task.SetRunNumber(task.GetRunNumber() - 1)
-				loop = true
-			} else if task.GetEndTime() > now {
-				loop = true
-			}
-
-			if loop {
-				spacing := task.GetSpacing()
-				if spacing > 0 {
-					//must use now time
-					//task.SetRuntime(task.GetRunTime() + task.GetSpacing())
-					task.SetRuntime(now + spacing)
-					TS.addTaskChannel(task)
-				}
-			}else {
-                j.close(false)
-            }
+			j.loop()
+			j.close()
 			return
-		case <-j.stop:
-            j.close(true)
 		}
 	}
 }
 
-func (j *taskJob) close(exit bool) {
-	close(j.done)
-	close(j.err)
-	close(j.stop)
-	if exit {
-        runtime.Goexit()
-    }
+func (j *taskJob) close() {
+	runtime.Goexit()
+}
+
+func panicToError(r interface{}) error {
+	var err error
+	//check exactly what the panic was and create error.
+	switch x := r.(type) {
+	case string:
+		err = errors.New(x)
+	case error:
+		err = x
+	default:
+		err = errors.New("UnKnow panic")
+	}
+	return err
 }

@@ -28,4 +28,17 @@ type TaskGetInterface interface{
 
 type TaskLogInterface interface {
     Println(v ...interface{})
+    Printf(format string, v ...interface{})
+    Fatal(v ...interface{})
+    Fatalf(format string, v ...interface{})
+    Panic(v ...interface{})
+    Panicf(format string, v ...interface{})
+}
+
+type LogInterface interface {
+
+    Debug(format string, v ...interface{})
+    Info(format string, v ...interface{})
+    Warn(format string, v ...interface{})
+    Fatal(format string, v ...interface{})
 }
